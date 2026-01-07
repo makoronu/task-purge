@@ -24,6 +24,7 @@ const Admin = {
     this._elements = {
       apiToken: document.getElementById('api-token'),
       userSelect: document.getElementById('user-select'),
+      claudeApiKey: document.getElementById('claude-api-key'),
       saveBtn: document.getElementById('save-btn'),
       testSpeechBtn: document.getElementById('test-speech-btn'),
       errorMessage: document.getElementById('error-message'),
@@ -61,6 +62,11 @@ const Admin = {
           if (settings.userId) {
             this._elements.userSelect.value = settings.userId;
           }
+        }
+
+        // Claude APIキー（任意）
+        if (settings.claudeApiKey) {
+          this._elements.claudeApiKey.value = settings.claudeApiKey;
         }
       }
     } catch (error) {
@@ -115,6 +121,7 @@ const Admin = {
     const settings = {
       apiToken: this._elements.apiToken.value.trim(),
       userId: this._elements.userSelect.value,
+      claudeApiKey: this._elements.claudeApiKey.value.trim() || null,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
 
@@ -148,6 +155,9 @@ const Admin = {
    */
   async _testSpeech() {
     try {
+      // テスト時は入力中のAPIキーを一時的に設定
+      const currentKey = this._elements.claudeApiKey.value.trim() || null;
+      Speech.setClaudeApiKey(currentKey);
       await Speech.test();
     } catch (error) {
       this._showError('音声テストに失敗しました: ' + error.message);

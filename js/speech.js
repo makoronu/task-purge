@@ -1,5 +1,5 @@
 /**
- * 音声合成
+ * 音声合成（Claude API統合版）
  */
 const Speech = {
   /** @type {SpeechSynthesisVoice|null} */
@@ -7,6 +7,9 @@ const Speech = {
 
   /** @type {boolean} */
   _initialized: false,
+
+  /** @type {string|null} */
+  _claudeApiKey: null,
 
   /**
    * 音声合成を初期化
@@ -46,6 +49,14 @@ const Speech = {
   },
 
   /**
+   * Claude APIキーを設定
+   * @param {string|null} apiKey
+   */
+  setClaudeApiKey(apiKey) {
+    this._claudeApiKey = apiKey || null;
+  },
+
+  /**
    * テキストを音声で発話
    * @param {string} text
    * @returns {Promise<void>}
@@ -77,23 +88,102 @@ const Speech = {
   },
 
   /**
-   * タスク名をリマインドフレーズで発話
-   * @param {string} taskName
+   * Claude APIで有機的なメッセージを生成
+   * @param {string} boardName - ボード名（案件名）
+   * @param {string} taskName - タスク名
+   * @param {string} priority - 優先度（critical/high）
+   * @returns {Promise<string>}
    */
-  async remind(taskName) {
+  async _generateMessage(boardName, taskName, priority) {
+    if (!this._claudeApiKey) {
+      return this._getFallbackMessage(taskName);
+    }
+
+    const priorityText = priority === 'critical' ? '緊急' : '高優先度';
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), CONSTANTS.CLAUDE_TIMEOUT_MS);
+
+    try {
+      const response = await fetch(CONSTANTS.CLAUDE_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this._claudeApiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: CONSTANTS.CLAUDE_MODEL,
+          max_tokens: 100,
+          messages: [{
+            role: 'user',
+            content: `タスクリマインダーです。以下のタスクを緊急感を持って50文字以内で伝えてください。
+面白く、でも失礼なく。語尾は「ですよ！」「ください！」など。
+
+ボード名（案件）: ${boardName}
+タスク名: ${taskName}
+優先度: ${priorityText}
+期限: 今日
+
+メッセージのみを出力してください。`
+          }]
+        }),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`Claude API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const message = data?.content?.[0]?.text;
+
+      if (message) {
+        return message.trim();
+      }
+
+      return this._getFallbackMessage(taskName);
+    } catch (error) {
+      clearTimeout(timeoutId);
+      // エラー時は静的フレーズにfallback
+      return this._getFallbackMessage(taskName);
+    }
+  },
+
+  /**
+   * 静的フレーズを取得（fallback用）
+   * @param {string} taskName
+   * @returns {string}
+   */
+  _getFallbackMessage(taskName) {
     const phrases = CONSTANTS.REMINDER_PHRASES;
     const phrase = phrases[Math.floor(Math.random() * phrases.length)];
-    const text = phrase.replace('{taskName}', taskName);
-    await this.speak(text);
+    return phrase.replace('{taskName}', taskName);
+  },
+
+  /**
+   * タスクをリマインドフレーズで発話
+   * @param {{name: string, boardName: string, priority: string}} task
+   */
+  async remind(task) {
+    const message = await this._generateMessage(
+      task.boardName || '不明な案件',
+      task.name,
+      task.priority || 'high'
+    );
+    await this.speak(message);
   },
 
   /**
    * 複数タスクをリマインド
-   * @param {Array<{name: string}>} tasks
+   * @param {Array<{name: string, boardName: string, priority: string}>} tasks
    */
   async remindTasks(tasks) {
     for (const task of tasks) {
-      await this.remind(task.name);
+      await this.remind(task);
       // タスク間に少し間隔を空ける
       await new Promise(r => setTimeout(r, 500));
     }
@@ -103,6 +193,16 @@ const Speech = {
    * テスト発話
    */
   async test() {
-    await this.speak('音声テストです。タスクが残っています。');
+    if (this._claudeApiKey) {
+      // Claude APIが設定されている場合はAI生成メッセージでテスト
+      const testMessage = await this._generateMessage(
+        'テスト案件',
+        'テストタスク',
+        'critical'
+      );
+      await this.speak(testMessage);
+    } else {
+      await this.speak('音声テストです。タスクが残っています。');
+    }
   }
 };

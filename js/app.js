@@ -65,6 +65,8 @@ const App = {
 
       if (doc.exists) {
         this._settings = doc.data();
+        // Claude APIキーをSpeechモジュールに設定
+        Speech.setClaudeApiKey(this._settings.claudeApiKey);
         this._hideError();
       } else {
         this._showError('設定が未完了です。右上の歯車アイコンから設定してください。');

@@ -5,6 +5,11 @@ const CONSTANTS = {
   // Monday.com API
   MONDAY_API_URL: 'https://api.monday.com/v2',
 
+  // Claude API
+  CLAUDE_API_URL: 'https://api.anthropic.com/v1/messages',
+  CLAUDE_MODEL: 'claude-3-5-haiku-20241022',
+  CLAUDE_TIMEOUT_MS: 5000, // 5秒タイムアウト
+
   // リマインド間隔（ミリ秒）
   DEFAULT_INTERVAL_MS: 15 * 60 * 1000, // 15分
 
