@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task Purge</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="theme-color" content="#1a1a2e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Task Purge</h1>
+      <span id="status-badge" class="badge badge-stopped">停止中</span>
+    </header>
+
+    <section class="settings">
+      <h2>設定</h2>
+      <div class="form-group">
+        <label for="api-token">APIトークン</label>
+        <input type="password" id="api-token" placeholder="Monday.com APIトークン">
+      </div>
+      <div class="form-group">
+        <label for="board-select">ボード</label>
+        <select id="board-select" disabled>
+          <option value="">トークンを入力してください</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="priority-column">優先度カラム</label>
+        <select id="priority-column" disabled>
+          <option value="">ボードを選択してください</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="date-column">期限カラム</label>
+        <select id="date-column" disabled>
+          <option value="">ボードを選択してください</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="status-column">ステータスカラム</label>
+        <select id="status-column" disabled>
+          <option value="">ボードを選択してください</option>
+        </select>
+      </div>
+      <div class="button-group">
+        <button id="save-btn" class="btn btn-primary">保存</button>
+        <button id="test-speech-btn" class="btn btn-secondary">音声テスト</button>
+      </div>
+    </section>
+
+    <section class="monitor">
+      <h2>監視</h2>
+      <div class="monitor-controls">
+        <button id="start-btn" class="btn btn-success">開始</button>
+        <button id="stop-btn" class="btn btn-danger" disabled>停止</button>
+        <span class="countdown">次回チェック: <span id="countdown">--:--</span></span>
+      </div>
+    </section>
+
+    <section class="tasks">
+      <h2>未完了タスク（緊急・高 + 当日期限）</h2>
+      <ul id="task-list">
+        <li class="empty">監視を開始してください</li>
+      </ul>
+    </section>
+
+    <div id="error-message" class="error-message" style="display: none;"></div>
+  </div>
+
+  <script src="js/constants.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/monday-api.js"></script>
+  <script src="js/speech.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    // Service Worker登録
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('SW registered:', reg.scope))
+          .catch(err => console.error('SW registration failed:', err));
+      });
+    }
+  </script>
+</body>
+</html>
