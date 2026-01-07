@@ -51,6 +51,16 @@ jobs:
             echo "完了"
 
             echo ""
+            echo "=== Node.js確認 ==="
+            if ! command -v node &> /dev/null; then
+              echo "Node.jsをインストール中..."
+              curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+              apt-get install -y nodejs
+            fi
+            node --version
+            npm --version
+
+            echo ""
             echo "=== APIサーバーセットアップ ==="
             cd /opt/task-purge/api
             npm install --production
