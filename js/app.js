@@ -23,6 +23,9 @@ const App = {
   /** @type {Object} */
   _elements: {},
 
+  /** @type {string} */
+  _accountSlug: '',
+
   /**
    * アプリケーション初期化
    */
@@ -150,6 +153,9 @@ const App = {
     this._isChecking = true;
 
     try {
+      // アカウントslug取得（初回のみ）
+      await this._fetchAccountSlug();
+
       // 全ボードからタスク取得
       const allItems = await this._fetchAllBoardsItems();
       const urgentTasks = this._filterUrgentTasks(allItems);
@@ -223,8 +229,8 @@ const App = {
       const data = await this._fetchMonday(query, { boardId: [boardId] });
       const items = data?.boards?.[0]?.items_page?.items || [];
 
-      // ボード名を各アイテムに付与
-      return items.map(item => ({ ...item, boardName }));
+      // ボード名とボードIDを各アイテムに付与
+      return items.map(item => ({ ...item, boardName, boardId }));
     } catch {
       // 個別ボードのエラーは無視して続行
       return [];
@@ -265,6 +271,34 @@ const App = {
   },
 
   /**
+   * アカウントslugを取得（初回のみAPI呼び出し、以降キャッシュ）
+   * @returns {Promise<string>}
+   */
+  async _fetchAccountSlug() {
+    if (this._accountSlug) return this._accountSlug;
+
+    try {
+      const data = await this._fetchMonday(`query { account { slug } }`);
+      this._accountSlug = data?.account?.slug || '';
+    } catch {
+      this._accountSlug = '';
+    }
+    return this._accountSlug;
+  },
+
+  /**
+   * Monday.comのアイテムURLを生成
+   * @param {Object} task - boardId, idを含むタスクオブジェクト
+   * @returns {string|null}
+   */
+  _getMondayUrl(task) {
+    if (!this._accountSlug || !task.boardId || !task.id) {
+      return null;
+    }
+    return `https://${this._accountSlug}.monday.com/boards/${task.boardId}/pulses/${task.id}`;
+  },
+
+  /**
    * 緊急・高優先度 + 当日期限 + 担当者フィルタ（固定カラムID版）
    * @param {Array} items
    * @returns {Array}
@@ -297,6 +331,7 @@ const App = {
       return {
         id: item.id,
         name: item.name,
+        boardId: item.boardId,
         boardName: item.boardName,
         priority: this._getPriorityLevel(priorityValue),
         isOverdue: this._isOverdue(dateValue)
@@ -430,8 +465,9 @@ const App = {
       return;
     }
 
-    list.innerHTML = tasks.map(task => `
-      <li class="priority-${task.priority}${task.isOverdue ? ' overdue' : ''}">
+    list.innerHTML = tasks.map(task => {
+      const url = this._getMondayUrl(task);
+      const content = `
         <div class="task-board">${this._escapeHtml(task.boardName || '')}</div>
         <div class="task-name">${this._escapeHtml(task.name)}</div>
         <div class="task-meta">
@@ -442,8 +478,23 @@ const App = {
             ${task.isOverdue ? '期限切れ' : '期限: 今日'}
           </span>
         </div>
-      </li>
-    `).join('');
+      `;
+
+      if (url) {
+        return `
+          <li class="priority-${task.priority}${task.isOverdue ? ' overdue' : ''}">
+            <a href="${url}" target="_blank" rel="noopener noreferrer" class="task-link">
+              ${content}
+            </a>
+          </li>
+        `;
+      }
+      return `
+        <li class="priority-${task.priority}${task.isOverdue ? ' overdue' : ''}">
+          ${content}
+        </li>
+      `;
+    }).join('');
   },
 
   /**

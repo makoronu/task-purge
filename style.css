@@ -337,6 +337,21 @@ select:disabled, input:disabled {
   color: #fff;
 }
 
+/* タスクリンク */
+.task-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+
+.task-link:hover .task-name {
+  color: var(--color-primary-dark);
+}
+
+#task-list li:has(.task-link) {
+  cursor: pointer;
+}
+
 /* エラーメッセージ */
 .error-message {
   background: linear-gradient(135deg, #FFEBEE 0%, #FFCDD2 100%);
