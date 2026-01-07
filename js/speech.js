@@ -1,5 +1,5 @@
 /**
- * 音声合成（バックエンドAPI経由でClaude AI連携）
+ * 音声合成モジュール
  */
 const Speech = {
   /** @type {SpeechSynthesisVoice|null} */
@@ -46,11 +46,11 @@ const Speech = {
   },
 
   /**
-   * Claude APIキーを設定（後方互換性のため維持、サーバー側で管理）
+   * Claude APIキーを設定（後方互換性のため維持、未使用）
    * @param {string|null} apiKey - 未使用
    */
   setClaudeApiKey(apiKey) {
-    // APIキーはサーバー側環境変数で管理するため、この関数は何もしない
+    // 未使用（後方互換性のため関数は残す）
   },
 
   /**
@@ -85,59 +85,14 @@ const Speech = {
   },
 
   /**
-   * バックエンドAPI経由でClaude AIメッセージを生成
+   * リマインドメッセージを生成
    * @param {string} boardName - ボード名（案件名）
    * @param {string} taskName - タスク名
    * @param {string} priority - 優先度（critical/high）
    * @param {boolean} isOverdue - 期限切れかどうか
-   * @returns {Promise<string>}
-   */
-  async _generateMessage(boardName, taskName, priority, isOverdue = false) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), CONSTANTS.CLAUDE_TIMEOUT_MS);
-
-    try {
-      const response = await fetch(CONSTANTS.CLAUDE_API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          boardName: boardName || '不明な案件',
-          taskName,
-          priority: priority || 'high',
-          isOverdue: isOverdue || false
-        }),
-        signal: controller.signal
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      if (data?.message) {
-        return data.message;
-      }
-
-      return this._getFallbackMessage(taskName, isOverdue, boardName);
-    } catch (error) {
-      clearTimeout(timeoutId);
-      // エラー時は静的フレーズにfallback
-      return this._getFallbackMessage(taskName, isOverdue, boardName);
-    }
-  },
-
-  /**
-   * 静的フレーズを取得（fallback用）
-   * @param {string} taskName
-   * @param {boolean} isOverdue
-   * @param {string} boardName
    * @returns {string}
    */
-  _getFallbackMessage(taskName, isOverdue = false, boardName = '') {
+  _generateMessage(boardName, taskName, priority, isOverdue = false) {
     const prefix = boardName ? `${boardName}の` : '';
     const deadline = isOverdue ? '期限切れです！' : '今日が期限です。';
     return `${prefix}${taskName}、${deadline}`;
@@ -148,8 +103,8 @@ const Speech = {
    * @param {{name: string, boardName: string, priority: string, isOverdue: boolean}} task
    */
   async remind(task) {
-    const message = await this._generateMessage(
-      task.boardName || '不明な案件',
+    const message = this._generateMessage(
+      task.boardName || '',
       task.name,
       task.priority || 'high',
       task.isOverdue || false
@@ -170,14 +125,15 @@ const Speech = {
   },
 
   /**
-   * テスト発話（AI生成メッセージでテスト）
+   * テスト発話
    */
   async test() {
-    const testMessage = await this._generateMessage(
+    const message = this._generateMessage(
       'テスト案件',
       'テストタスク',
-      'critical'
+      'critical',
+      false
     );
-    await this.speak(testMessage);
+    await this.speak(message);
   }
 };

@@ -5,10 +5,6 @@ const CONSTANTS = {
   // Monday.com API
   MONDAY_API_URL: 'https://api.monday.com/v2',
 
-  // Claude API（バックエンドプロキシ経由）
-  CLAUDE_API_URL: '/api/claude',
-  CLAUDE_TIMEOUT_MS: 5000, // 5秒タイムアウト
-
   // リマインド間隔（ミリ秒）
   DEFAULT_INTERVAL_MS: 15 * 60 * 1000, // 15分
 

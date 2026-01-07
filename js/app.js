@@ -432,6 +432,7 @@ const App = {
 
     list.innerHTML = tasks.map(task => `
       <li class="priority-${task.priority}${task.isOverdue ? ' overdue' : ''}">
+        <div class="task-board">${this._escapeHtml(task.boardName || '')}</div>
         <div class="task-name">${this._escapeHtml(task.name)}</div>
         <div class="task-meta">
           <span class="task-priority ${task.priority}">
