@@ -9,6 +9,7 @@
 #   - SERVER_HOST: 160.251.138.83
 #   - SERVER_USER: root
 #   - SSH_PRIVATE_KEY: polar用SSH鍵
+#   - CLAUDE_API_KEY: Anthropic API Key
 
 name: Deploy to Production
 
@@ -27,6 +28,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script_stop: true
+          envs: CLAUDE_API_KEY
           script: |
             set -e
             echo "========================================"
@@ -49,7 +51,34 @@ jobs:
             echo "完了"
 
             echo ""
+            echo "=== APIサーバーセットアップ ==="
+            cd /opt/task-purge/api
+            npm install --production
+
+            # PM2でAPIサーバー起動（環境変数付き）
+            export CLAUDE_API_KEY="${{ secrets.CLAUDE_API_KEY }}"
+
+            # PM2がインストールされていなければインストール
+            if ! command -v pm2 &> /dev/null; then
+              npm install -g pm2
+            fi
+
+            # 既存プロセスを停止して再起動
+            pm2 delete task-purge-api 2>/dev/null || true
+            pm2 start server.js --name task-purge-api --env production
+            pm2 save
+            echo "APIサーバー起動完了"
+
+            echo ""
+            echo "=== nginx設定更新 ==="
+            cp /opt/task-purge/deploy/nginx.conf /etc/nginx/sites-available/polar-ai
+            nginx -t && systemctl reload nginx
+            echo "nginx設定更新完了"
+
+            echo ""
             echo "========================================"
             echo "デプロイ完了"
             echo "========================================"
             echo "確認: https://tp.polar-ai.app/"
+        env:
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}

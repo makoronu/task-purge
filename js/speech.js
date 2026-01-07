@@ -1,5 +1,5 @@
 /**
- * 音声合成（Claude API統合版）
+ * 音声合成（バックエンドAPI経由でClaude AI連携）
  */
 const Speech = {
   /** @type {SpeechSynthesisVoice|null} */
@@ -7,9 +7,6 @@ const Speech = {
 
   /** @type {boolean} */
   _initialized: false,
-
-  /** @type {string|null} */
-  _claudeApiKey: null,
 
   /**
    * 音声合成を初期化
@@ -49,11 +46,11 @@ const Speech = {
   },
 
   /**
-   * Claude APIキーを設定
-   * @param {string|null} apiKey
+   * Claude APIキーを設定（後方互換性のため維持、サーバー側で管理）
+   * @param {string|null} apiKey - 未使用
    */
   setClaudeApiKey(apiKey) {
-    this._claudeApiKey = apiKey || null;
+    // APIキーはサーバー側環境変数で管理するため、この関数は何もしない
   },
 
   /**
@@ -88,7 +85,7 @@ const Speech = {
   },
 
   /**
-   * Claude APIで有機的なメッセージを生成
+   * バックエンドAPI経由でClaude AIメッセージを生成
    * @param {string} boardName - ボード名（案件名）
    * @param {string} taskName - タスク名
    * @param {string} priority - 優先度（critical/high）
@@ -96,13 +93,6 @@ const Speech = {
    * @returns {Promise<string>}
    */
   async _generateMessage(boardName, taskName, priority, isOverdue = false) {
-    if (!this._claudeApiKey) {
-      return this._getFallbackMessage(taskName, isOverdue, boardName);
-    }
-
-    const priorityText = priority === 'critical' ? '緊急' : '高優先度';
-    const deadlineText = isOverdue ? '期限切れ（過ぎています！）' : '今日';
-
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), CONSTANTS.CLAUDE_TIMEOUT_MS);
 
@@ -110,27 +100,13 @@ const Speech = {
       const response = await fetch(CONSTANTS.CLAUDE_API_URL, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': this._claudeApiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true'
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: CONSTANTS.CLAUDE_MODEL,
-          max_tokens: 100,
-          messages: [{
-            role: 'user',
-            content: `タスクリマインダーです。以下のタスクを緊急感を持って50文字以内で伝えてください。
-面白く、でも失礼なく。語尾は「ですよ！」「ください！」など。
-${isOverdue ? '【重要】期限切れなので特に急いでいることを強調してください。' : ''}
-
-ボード名（案件）: ${boardName}
-タスク名: ${taskName}
-優先度: ${priorityText}
-期限: ${deadlineText}
-
-メッセージのみを出力してください。`
-          }]
+          boardName: boardName || '不明な案件',
+          taskName,
+          priority: priority || 'high',
+          isOverdue: isOverdue || false
         }),
         signal: controller.signal
       });
@@ -138,14 +114,12 @@ ${isOverdue ? '【重要】期限切れなので特に急いでいることを�
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        throw new Error(`Claude API error: ${response.status}`);
+        throw new Error(`API error: ${response.status}`);
       }
 
       const data = await response.json();
-      const message = data?.content?.[0]?.text;
-
-      if (message) {
-        return message.trim();
+      if (data?.message) {
+        return data.message;
       }
 
       return this._getFallbackMessage(taskName, isOverdue, boardName);
@@ -196,19 +170,14 @@ ${isOverdue ? '【重要】期限切れなので特に急いでいることを�
   },
 
   /**
-   * テスト発話
+   * テスト発話（AI生成メッセージでテスト）
    */
   async test() {
-    if (this._claudeApiKey) {
-      // Claude APIが設定されている場合はAI生成メッセージでテスト
-      const testMessage = await this._generateMessage(
-        'テスト案件',
-        'テストタスク',
-        'critical'
-      );
-      await this.speak(testMessage);
-    } else {
-      await this.speak('音声テストです。タスクが残っています。');
-    }
+    const testMessage = await this._generateMessage(
+      'テスト案件',
+      'テストタスク',
+      'critical'
+    );
+    await this.speak(testMessage);
   }
 };
