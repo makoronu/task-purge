@@ -5,10 +5,10 @@
 #   2. 「Deploy to Production」を選択
 #   3. 「Run workflow」ボタンをクリック
 #
-# 必要なSecrets (SASと共通):
-#   - SERVER_HOST: sas.realestateautomation.net
+# 必要なSecrets:
+#   - SERVER_HOST: 160.251.138.83
 #   - SERVER_USER: root
-#   - SSH_PRIVATE_KEY: ~/.ssh/REA.pem の内容
+#   - SSH_PRIVATE_KEY: polar用SSH鍵
 
 name: Deploy to Production
 
@@ -36,6 +36,7 @@ jobs:
             # ディレクトリ作成（初回のみ）
             if [ ! -d /opt/task-purge ]; then
               echo "=== 初回セットアップ ==="
+              mkdir -p /opt
               cd /opt
               git clone https://github.com/makoronu/task-purge.git
             fi
@@ -51,4 +52,4 @@ jobs:
             echo "========================================"
             echo "デプロイ完了"
             echo "========================================"
-            echo "確認: https://tp.realestateautomation.net/"
+            echo "確認: https://tp.polar-ai.app/"
