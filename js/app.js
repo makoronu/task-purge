@@ -14,6 +14,9 @@ const App = {
   /** @type {Date|null} */
   _nextCheckTime: null,
 
+  /** @type {Object} */
+  _settings: null,
+
   // DOM要素
   _elements: {},
 
@@ -23,7 +26,7 @@ const App = {
   async init() {
     this._cacheElements();
     this._bindEvents();
-    this._loadSavedSettings();
+    await this._loadSettings();
     await Speech.init();
   },
 
@@ -32,13 +35,6 @@ const App = {
    */
   _cacheElements() {
     this._elements = {
-      apiToken: document.getElementById('api-token'),
-      boardSelect: document.getElementById('board-select'),
-      priorityColumn: document.getElementById('priority-column'),
-      dateColumn: document.getElementById('date-column'),
-      statusColumn: document.getElementById('status-column'),
-      saveBtn: document.getElementById('save-btn'),
-      testSpeechBtn: document.getElementById('test-speech-btn'),
       startBtn: document.getElementById('start-btn'),
       stopBtn: document.getElementById('stop-btn'),
       statusBadge: document.getElementById('status-badge'),
@@ -52,153 +48,56 @@ const App = {
    * イベントをバインド
    */
   _bindEvents() {
-    // APIトークン変更時にボード読み込み
-    this._elements.apiToken.addEventListener('change', () => this._onTokenChange());
-
-    // ボード変更時にカラム読み込み
-    this._elements.boardSelect.addEventListener('change', () => this._onBoardChange());
-
-    // 保存ボタン
-    this._elements.saveBtn.addEventListener('click', () => this._saveSettings());
-
-    // 音声テストボタン
-    this._elements.testSpeechBtn.addEventListener('click', () => this._testSpeech());
-
-    // 開始/停止ボタン
     this._elements.startBtn.addEventListener('click', () => this._startMonitoring());
     this._elements.stopBtn.addEventListener('click', () => this._stopMonitoring());
   },
 
   /**
-   * 保存済み設定を読み込み
+   * 設定を読み込み（Firestoreから）
    */
-  async _loadSavedSettings() {
-    const settings = Config.getAll();
+  async _loadSettings() {
+    try {
+      const user = Auth.getCurrentUser();
+      if (!user) return;
 
-    if (settings.apiToken) {
-      this._elements.apiToken.value = settings.apiToken;
-      await this._loadBoards();
+      const db = firebase.firestore();
+      const doc = await db.collection('settings').doc(user.uid).get();
 
-      if (settings.boardId) {
-        this._elements.boardSelect.value = settings.boardId;
-        await this._loadColumns();
-
-        if (settings.priorityColumn) {
-          this._elements.priorityColumn.value = settings.priorityColumn;
-        }
-        if (settings.dateColumn) {
-          this._elements.dateColumn.value = settings.dateColumn;
-        }
-        if (settings.statusColumn) {
-          this._elements.statusColumn.value = settings.statusColumn;
-        }
+      if (doc.exists) {
+        this._settings = doc.data();
+        this._hideError();
+      } else {
+        this._showError('設定が未完了です。右上の歯車アイコンから設定してください。');
+        this._elements.startBtn.disabled = true;
       }
-    }
-  },
-
-  /**
-   * トークン変更時の処理
-   */
-  async _onTokenChange() {
-    const token = this._elements.apiToken.value.trim();
-    if (!token) return;
-
-    Config.saveApiToken(token);
-    await this._loadBoards();
-  },
-
-  /**
-   * ボード一覧を読み込み
-   */
-  async _loadBoards() {
-    try {
-      this._showLoading(this._elements.boardSelect, '読み込み中...');
-      const boards = await MondayAPI.getBoards();
-
-      this._elements.boardSelect.innerHTML = '<option value="">選択してください</option>';
-      boards.forEach(board => {
-        const option = document.createElement('option');
-        option.value = board.id;
-        option.textContent = board.name;
-        this._elements.boardSelect.appendChild(option);
-      });
-      this._elements.boardSelect.disabled = false;
-      this._hideError();
     } catch (error) {
-      this._showError(error.message);
-      this._elements.boardSelect.innerHTML = '<option value="">エラー</option>';
+      this._showError('設定の読み込みに失敗しました: ' + error.message);
     }
   },
 
   /**
-   * ボード変更時の処理
+   * 設定が完了しているか確認
+   * @returns {boolean}
    */
-  async _onBoardChange() {
-    const boardId = this._elements.boardSelect.value;
-    if (!boardId) return;
-
-    Config.saveBoardId(boardId);
-    await this._loadColumns();
-  },
-
-  /**
-   * カラム一覧を読み込み
-   */
-  async _loadColumns() {
-    const boardId = this._elements.boardSelect.value;
-    if (!boardId) return;
-
-    try {
-      const columns = await MondayAPI.getColumns(boardId);
-
-      // 各カラムセレクトを更新
-      [this._elements.priorityColumn, this._elements.dateColumn, this._elements.statusColumn]
-        .forEach(select => {
-          select.innerHTML = '<option value="">選択してください</option>';
-          columns.forEach(col => {
-            const option = document.createElement('option');
-            option.value = col.id;
-            option.textContent = `${col.title} (${col.type})`;
-            select.appendChild(option);
-          });
-          select.disabled = false;
-        });
-    } catch (error) {
-      this._showError(error.message);
-    }
-  },
-
-  /**
-   * 設定を保存
-   */
-  _saveSettings() {
-    Config.saveAll({
-      apiToken: this._elements.apiToken.value.trim(),
-      boardId: this._elements.boardSelect.value,
-      priorityColumn: this._elements.priorityColumn.value,
-      dateColumn: this._elements.dateColumn.value,
-      statusColumn: this._elements.statusColumn.value
-    });
-    alert('設定を保存しました');
-  },
-
-  /**
-   * 音声テスト
-   */
-  async _testSpeech() {
-    try {
-      await Speech.test();
-    } catch (error) {
-      this._showError('音声テストに失敗しました: ' + error.message);
-    }
+  _isConfigured() {
+    return !!(
+      this._settings &&
+      this._settings.apiToken &&
+      this._settings.boardId &&
+      this._settings.priorityColumn &&
+      this._settings.dateColumn &&
+      this._settings.statusColumn &&
+      this._settings.personColumn &&
+      this._settings.userId
+    );
   },
 
   /**
    * 監視開始
    */
   async _startMonitoring() {
-    if (!Config.isConfigured()) {
-      this._showError('設定が完了していません。全ての項目を入力してください。');
+    if (!this._isConfigured()) {
+      this._showError('設定が完了していません。管理画面で全ての項目を設定してください。');
       return;
     }
 
@@ -248,8 +147,8 @@ const App = {
     this._isChecking = true;
 
     try {
-      const boardId = Config.getBoardId();
-      const items = await MondayAPI.getItems(boardId);
+      // 設定からAPIトークンを使用
+      const items = await this._fetchItems();
       const urgentTasks = this._filterUrgentTasks(items);
 
       this._renderTasks(urgentTasks);
@@ -268,19 +167,70 @@ const App = {
   },
 
   /**
-   * 緊急・高優先度 + 当日期限のタスクをフィルタ
+   * Monday APIからアイテム取得
+   * @returns {Promise<Array>}
+   */
+  async _fetchItems() {
+    const query = `
+      query ($boardId: [ID!]!) {
+        boards(ids: $boardId) {
+          items_page(limit: 500) {
+            items {
+              id
+              name
+              column_values {
+                id
+                text
+                value
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    const response = await fetch(CONSTANTS.MONDAY_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': this._settings.apiToken
+      },
+      body: JSON.stringify({
+        query,
+        variables: { boardId: [this._settings.boardId] }
+      })
+    });
+
+    if (response.status === 401) {
+      throw new Error('APIトークンが無効です。管理画面で再設定してください。');
+    }
+
+    if (response.status === 429) {
+      throw new Error('APIレート制限に達しました。しばらく待ってください。');
+    }
+
+    const data = await response.json();
+
+    if (data.errors && data.errors.length > 0) {
+      throw new Error(data.errors[0].message);
+    }
+
+    return data?.data?.boards?.[0]?.items_page?.items || [];
+  },
+
+  /**
+   * 緊急・高優先度 + 当日期限 + 担当者フィルタ
    * @param {Array} items
    * @returns {Array}
    */
   _filterUrgentTasks(items) {
-    const priorityColId = Config.getPriorityColumn();
-    const dateColId = Config.getDateColumn();
-    const statusColId = Config.getStatusColumn();
+    const { priorityColumn, dateColumn, statusColumn, personColumn, userId } = this._settings;
 
     return items.filter(item => {
-      const priorityCol = item.column_values.find(c => c.id === priorityColId);
-      const dateCol = item.column_values.find(c => c.id === dateColId);
-      const statusCol = item.column_values.find(c => c.id === statusColId);
+      const priorityCol = item.column_values.find(c => c.id === priorityColumn);
+      const dateCol = item.column_values.find(c => c.id === dateColumn);
+      const statusCol = item.column_values.find(c => c.id === statusColumn);
+      const personCol = item.column_values.find(c => c.id === personColumn);
 
       const priorityValue = priorityCol?.text || '';
       const dateValue = dateCol?.text || '';
@@ -289,10 +239,11 @@ const App = {
       const isHighPriority = this._isHighPriority(priorityValue);
       const isToday = this._isToday(dateValue);
       const isCompleted = this._isCompleted(statusValue);
+      const isAssignedToMe = this._isAssignedToUser(personCol, userId);
 
-      return isHighPriority && isToday && !isCompleted;
+      return isHighPriority && isToday && !isCompleted && isAssignedToMe;
     }).map(item => {
-      const priorityCol = item.column_values.find(c => c.id === priorityColId);
+      const priorityCol = item.column_values.find(c => c.id === priorityColumn);
       const priorityValue = priorityCol?.text || '';
       return {
         id: item.id,
@@ -300,6 +251,24 @@ const App = {
         priority: this._getPriorityLevel(priorityValue)
       };
     });
+  },
+
+  /**
+   * 担当者が指定ユーザーか判定
+   * @param {Object} personCol
+   * @param {string} userId
+   * @returns {boolean}
+   */
+  _isAssignedToUser(personCol, userId) {
+    if (!personCol?.value) return false;
+
+    try {
+      const parsed = JSON.parse(personCol.value);
+      const personIds = parsed?.personsAndTeams?.map(p => String(p.id)) || [];
+      return personIds.includes(String(userId));
+    } catch {
+      return false;
+    }
   },
 
   /**
@@ -401,16 +370,6 @@ const App = {
   },
 
   /**
-   * ローディング表示
-   * @param {HTMLSelectElement} select
-   * @param {string} message
-   */
-  _showLoading(select, message) {
-    select.innerHTML = `<option value="">${message}</option>`;
-    select.disabled = true;
-  },
-
-  /**
    * エラー表示
    * @param {string} message
    */
@@ -437,6 +396,3 @@ const App = {
     return div.innerHTML;
   }
 };
-
-// DOMContentLoaded時に初期化
-document.addEventListener('DOMContentLoaded', () => App.init());

@@ -1,3 +1,27 @@
+/**
+ * Task Purge - Polar Bear Theme
+ * クールで可愛いしろくまデザイン
+ */
+
+:root {
+  --color-primary: #4FC3F7;
+  --color-primary-dark: #0288D1;
+  --color-accent: #81D4FA;
+  --color-success: #4CAF50;
+  --color-danger: #EF5350;
+  --color-warning: #FFB74D;
+  --color-bg: #F5F7FA;
+  --color-card: #FFFFFF;
+  --color-text: #37474F;
+  --color-text-light: #78909C;
+  --color-border: #E0E6ED;
+  --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -5,9 +29,9 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background-color: #1a1a2e;
-  color: #eee;
+  font-family: 'Hiragino Maru Gothic ProN', 'Rounded Mplus 1c', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text);
   min-height: 100vh;
   padding: 20px;
 }
@@ -17,205 +41,415 @@ body {
   margin: 0 auto;
 }
 
+/* ヘッダー */
 header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #333;
+  padding: 16px 20px;
+  background: var(--color-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
 }
 
-h1 {
-  font-size: 24px;
-  font-weight: 600;
-}
-
-h2 {
-  font-size: 16px;
-  font-weight: 500;
-  margin-bottom: 12px;
-  color: #aaa;
-}
-
-.badge {
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.badge-stopped {
-  background-color: #444;
-  color: #aaa;
-}
-
-.badge-running {
-  background-color: #28a745;
-  color: #fff;
-}
-
-section {
-  background-color: #16213e;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 16px;
-}
-
-.form-group {
-  margin-bottom: 12px;
-}
-
-label {
-  display: block;
-  font-size: 14px;
-  margin-bottom: 4px;
-  color: #aaa;
-}
-
-input, select {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #333;
-  border-radius: 6px;
-  background-color: #0f0f23;
-  color: #eee;
-  font-size: 14px;
-}
-
-input:focus, select:focus {
-  outline: none;
-  border-color: #4a90d9;
-}
-
-input::placeholder {
-  color: #666;
-}
-
-select:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.button-group {
-  display: flex;
-  gap: 8px;
-  margin-top: 16px;
-}
-
-.btn {
-  padding: 10px 20px;
-  border: none;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: opacity 0.2s;
-}
-
-.btn:hover {
-  opacity: 0.9;
-}
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-primary {
-  background-color: #4a90d9;
-  color: #fff;
-}
-
-.btn-secondary {
-  background-color: #444;
-  color: #eee;
-}
-
-.btn-success {
-  background-color: #28a745;
-  color: #fff;
-}
-
-.btn-danger {
-  background-color: #dc3545;
-  color: #fff;
-}
-
-.monitor-controls {
+.header-left {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
+.logo {
+  width: 40px;
+  height: 40px;
+}
+
+h1 {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--color-primary-dark);
+}
+
+h2 {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+h2::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 16px;
+  background: var(--color-primary);
+  border-radius: 2px;
+}
+
+/* バッジ */
+.badge {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badge-stopped {
+  background-color: #ECEFF1;
+  color: var(--color-text-light);
+}
+
+.badge-running {
+  background-color: var(--color-success);
+  color: #fff;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* セクション（カード） */
+section {
+  background-color: var(--color-card);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+/* フォーム */
+.form-group {
+  margin-bottom: 16px;
+}
+
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 6px;
+  color: var(--color-text-light);
+}
+
+input, select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background-color: #fff;
+  color: var(--color-text);
+  font-size: 14px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+input:focus, select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(79, 195, 247, 0.2);
+}
+
+input::placeholder {
+  color: #B0BEC5;
+}
+
+select:disabled, input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: #F5F5F5;
+}
+
+/* ボタン */
+.button-group {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  color: #fff;
+}
+
+.btn-secondary {
+  background-color: #ECEFF1;
+  color: var(--color-text);
+}
+
+.btn-success {
+  background: linear-gradient(135deg, #66BB6A 0%, #43A047 100%);
+  color: #fff;
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, #EF5350 0%, #E53935 100%);
+  color: #fff;
+}
+
+.btn-icon {
+  padding: 10px;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text-light);
+}
+
+.btn-icon:hover {
+  background: var(--color-border);
+  color: var(--color-text);
+}
+
+/* 監視コントロール */
+.monitor-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .countdown {
   margin-left: auto;
   font-size: 14px;
-  color: #aaa;
+  color: var(--color-text-light);
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 #countdown {
-  font-family: monospace;
-  color: #4a90d9;
+  font-family: 'SF Mono', Menlo, monospace;
+  font-weight: 600;
+  color: var(--color-primary-dark);
+  background: rgba(79, 195, 247, 0.1);
+  padding: 4px 10px;
+  border-radius: 6px;
 }
 
+/* タスクリスト */
 #task-list {
   list-style: none;
 }
 
 #task-list li {
-  padding: 12px;
-  border-radius: 6px;
-  margin-bottom: 8px;
-  background-color: #0f0f23;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 10px;
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+#task-list li:hover {
+  transform: translateX(4px);
+  box-shadow: var(--shadow-sm);
 }
 
 #task-list li.empty {
-  color: #666;
+  color: var(--color-text-light);
   text-align: center;
+  font-size: 14px;
+  padding: 24px;
 }
 
 #task-list li.priority-critical {
-  border-left: 4px solid #dc3545;
+  border-left: 4px solid var(--color-danger);
+  background: linear-gradient(90deg, rgba(239,83,80,0.05) 0%, transparent 100%);
 }
 
 #task-list li.priority-high {
-  border-left: 4px solid #fd7e14;
+  border-left: 4px solid var(--color-warning);
+  background: linear-gradient(90deg, rgba(255,183,77,0.05) 0%, transparent 100%);
 }
 
 .task-name {
-  font-weight: 500;
-  margin-bottom: 4px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--color-text);
 }
 
 .task-meta {
   font-size: 12px;
-  color: #888;
+  color: var(--color-text-light);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .task-priority {
   display: inline-block;
-  padding: 2px 8px;
-  border-radius: 4px;
+  padding: 3px 10px;
+  border-radius: 12px;
   font-size: 11px;
-  font-weight: 500;
-  margin-right: 8px;
+  font-weight: 600;
 }
 
 .task-priority.critical {
-  background-color: #dc3545;
+  background-color: var(--color-danger);
   color: #fff;
 }
 
 .task-priority.high {
-  background-color: #fd7e14;
+  background-color: var(--color-warning);
   color: #fff;
 }
 
+/* エラーメッセージ */
 .error-message {
-  background-color: #dc3545;
-  color: #fff;
-  padding: 12px;
-  border-radius: 6px;
+  background: linear-gradient(135deg, #FFEBEE 0%, #FFCDD2 100%);
+  color: #C62828;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
   margin-top: 16px;
+  font-size: 14px;
+  border: 1px solid #FFCDD2;
+}
+
+/* ローディング */
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ログイン画面 */
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.login-card {
+  background: var(--color-card);
+  border-radius: var(--radius-lg);
+  padding: 40px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: var(--shadow-md);
+  text-align: center;
+}
+
+.login-logo {
+  width: 80px;
+  height: 80px;
+  margin-bottom: 16px;
+}
+
+.login-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--color-primary-dark);
+  margin-bottom: 8px;
+}
+
+.login-subtitle {
+  font-size: 14px;
+  color: var(--color-text-light);
+  margin-bottom: 32px;
+}
+
+.login-form .form-group {
+  text-align: left;
+}
+
+.login-form .btn {
+  width: 100%;
+  margin-top: 24px;
+}
+
+/* 管理画面リンク */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-link {
+  color: var(--color-text-light);
+  text-decoration: none;
+  padding: 8px;
+  border-radius: 50%;
+  transition: background 0.2s;
+}
+
+.settings-link:hover {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+/* レスポンシブ */
+@media (max-width: 480px) {
+  body {
+    padding: 12px;
+  }
+
+  header {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+  }
+
+  .header-left {
+    flex-direction: column;
+  }
+
+  .monitor-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .countdown {
+    margin-left: 0;
+    justify-content: center;
+  }
+
+  .button-group {
+    flex-direction: column;
+  }
 }

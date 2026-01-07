@@ -1,16 +1,20 @@
 /**
  * Service Worker
  */
-const CACHE_NAME = 'taskpurge-v1';
+const CACHE_NAME = 'taskpurge-v2';
 const CACHE_URLS = [
   '/',
   '/index.html',
+  '/login.html',
+  '/admin.html',
   '/style.css',
+  '/js/firebase-config.js',
+  '/js/auth.js',
+  '/js/admin.js',
   '/js/constants.js',
-  '/js/config.js',
-  '/js/monday-api.js',
   '/js/speech.js',
   '/js/app.js',
+  '/icons/polar-bear.svg',
   '/manifest.json'
 ];
 
@@ -40,8 +44,14 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Monday API、chrome-extension はキャッシュ対象外
-  if (url.hostname === 'api.monday.com' || url.protocol === 'chrome-extension:') {
+  // 外部API、Firebase、chrome-extension はキャッシュ対象外
+  if (
+    url.hostname === 'api.monday.com' ||
+    url.hostname.includes('firebaseapp.com') ||
+    url.hostname.includes('googleapis.com') ||
+    url.hostname.includes('gstatic.com') ||
+    url.protocol === 'chrome-extension:'
+  ) {
     event.respondWith(fetch(event.request));
     return;
   }

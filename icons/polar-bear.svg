@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- シンプルで可愛いしろくまアイコン -->
+  <defs>
+    <linearGradient id="bearGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF"/>
+      <stop offset="100%" style="stop-color:#E3F2FD"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 耳（左） -->
+  <circle cx="25" cy="25" r="12" fill="url(#bearGrad)" stroke="#B0BEC5" stroke-width="2"/>
+  <circle cx="25" cy="25" r="6" fill="#81D4FA"/>
+
+  <!-- 耳（右） -->
+  <circle cx="75" cy="25" r="12" fill="url(#bearGrad)" stroke="#B0BEC5" stroke-width="2"/>
+  <circle cx="75" cy="25" r="6" fill="#81D4FA"/>
+
+  <!-- 顔 -->
+  <circle cx="50" cy="55" r="38" fill="url(#bearGrad)" stroke="#B0BEC5" stroke-width="2"/>
+
+  <!-- 目（左） -->
+  <circle cx="35" cy="50" r="5" fill="#37474F"/>
+  <circle cx="33" cy="48" r="2" fill="#FFFFFF"/>
+
+  <!-- 目（右） -->
+  <circle cx="65" cy="50" r="5" fill="#37474F"/>
+  <circle cx="63" cy="48" r="2" fill="#FFFFFF"/>
+
+  <!-- 鼻周り -->
+  <ellipse cx="50" cy="65" rx="15" ry="12" fill="#E3F2FD"/>
+
+  <!-- 鼻 -->
+  <ellipse cx="50" cy="62" rx="6" ry="4" fill="#37474F"/>
+
+  <!-- 口 -->
+  <path d="M 44 70 Q 50 76 56 70" fill="none" stroke="#37474F" stroke-width="2" stroke-linecap="round"/>
+</svg>
