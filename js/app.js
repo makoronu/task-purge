@@ -278,19 +278,22 @@ const App = {
       const statusValue = statusCol?.text || '';
 
       const isHighPriority = this._isHighPriority(priorityValue);
-      const isToday = this._isToday(dateValue);
+      const isTodayOrPast = this._isTodayOrPast(dateValue);
       const isCompleted = this._isCompleted(statusValue);
       const isAssignedToMe = this._isAssignedToUser(personCol, userId);
 
-      return isHighPriority && isToday && !isCompleted && isAssignedToMe;
+      return isHighPriority && isTodayOrPast && !isCompleted && isAssignedToMe;
     }).map(item => {
       const priorityCol = this._findColumn(item.column_values, CONSTANTS.COLUMN_IDS.PRIORITY);
+      const dateCol = this._findColumn(item.column_values, CONSTANTS.COLUMN_IDS.DATE);
       const priorityValue = priorityCol?.text || '';
+      const dateValue = dateCol?.text || '';
       return {
         id: item.id,
         name: item.name,
         boardName: item.boardName,
-        priority: this._getPriorityLevel(priorityValue)
+        priority: this._getPriorityLevel(priorityValue),
+        isOverdue: this._isOverdue(dateValue)
       };
     });
   },
@@ -362,17 +365,38 @@ const App = {
   },
 
   /**
-   * 当日かどうか判定（JST）
+   * 当日または期限切れかどうか判定（JST）
    * @param {string} dateStr
    * @returns {boolean}
    */
-  _isToday(dateStr) {
+  _isTodayOrPast(dateStr) {
     if (!dateStr) return false;
 
     try {
-      const today = new Date().toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' });
-      const target = new Date(dateStr).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' });
-      return today === target;
+      const now = new Date();
+      const todayStart = new Date(now.toLocaleDateString('en-CA', { timeZone: 'Asia/Tokyo' }));
+      const target = new Date(dateStr);
+      // 期限日が今日以前（当日含む）
+      return target <= new Date(todayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
+    } catch {
+      return false;
+    }
+  },
+
+  /**
+   * 期限切れかどうか判定（JST）
+   * @param {string} dateStr
+   * @returns {boolean}
+   */
+  _isOverdue(dateStr) {
+    if (!dateStr) return false;
+
+    try {
+      const now = new Date();
+      const todayStart = new Date(now.toLocaleDateString('en-CA', { timeZone: 'Asia/Tokyo' }));
+      const target = new Date(dateStr);
+      // 期限日が今日より前
+      return target < todayStart;
     } catch {
       return false;
     }
@@ -401,13 +425,15 @@ const App = {
     }
 
     list.innerHTML = tasks.map(task => `
-      <li class="priority-${task.priority}">
+      <li class="priority-${task.priority}${task.isOverdue ? ' overdue' : ''}">
         <div class="task-name">${this._escapeHtml(task.name)}</div>
         <div class="task-meta">
           <span class="task-priority ${task.priority}">
             ${task.priority === 'critical' ? '緊急' : '高'}
           </span>
-          期限: 今日
+          <span class="task-deadline${task.isOverdue ? ' overdue' : ''}">
+            ${task.isOverdue ? '期限切れ' : '期限: 今日'}
+          </span>
         </div>
       </li>
     `).join('');

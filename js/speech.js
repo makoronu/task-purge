@@ -54,6 +54,7 @@ const Speech = {
    */
   setClaudeApiKey(apiKey) {
     this._claudeApiKey = apiKey || null;
+    console.log('[Speech] Claude APIキー設定:', apiKey ? '設定済み' : '未設定');
   },
 
   /**
@@ -92,14 +93,16 @@ const Speech = {
    * @param {string} boardName - ボード名（案件名）
    * @param {string} taskName - タスク名
    * @param {string} priority - 優先度（critical/high）
+   * @param {boolean} isOverdue - 期限切れかどうか
    * @returns {Promise<string>}
    */
-  async _generateMessage(boardName, taskName, priority) {
+  async _generateMessage(boardName, taskName, priority, isOverdue = false) {
     if (!this._claudeApiKey) {
-      return this._getFallbackMessage(taskName);
+      return this._getFallbackMessage(taskName, isOverdue);
     }
 
     const priorityText = priority === 'critical' ? '緊急' : '高優先度';
+    const deadlineText = isOverdue ? '期限切れ（過ぎています！）' : '今日';
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), CONSTANTS.CLAUDE_TIMEOUT_MS);
@@ -120,11 +123,12 @@ const Speech = {
             role: 'user',
             content: `タスクリマインダーです。以下のタスクを緊急感を持って50文字以内で伝えてください。
 面白く、でも失礼なく。語尾は「ですよ！」「ください！」など。
+${isOverdue ? '【重要】期限切れなので特に急いでいることを強調してください。' : ''}
 
 ボード名（案件）: ${boardName}
 タスク名: ${taskName}
 優先度: ${priorityText}
-期限: 今日
+期限: ${deadlineText}
 
 メッセージのみを出力してください。`
           }]
@@ -145,34 +149,38 @@ const Speech = {
         return message.trim();
       }
 
-      return this._getFallbackMessage(taskName);
+      return this._getFallbackMessage(taskName, isOverdue);
     } catch (error) {
       clearTimeout(timeoutId);
-      // エラー時は静的フレーズにfallback
-      return this._getFallbackMessage(taskName);
+      // エラー時は静的フレーズにfallback（原因をログ出力）
+      console.error('[Speech] Claude API error:', error.message || error);
+      return this._getFallbackMessage(taskName, isOverdue);
     }
   },
 
   /**
    * 静的フレーズを取得（fallback用）
    * @param {string} taskName
+   * @param {boolean} isOverdue
    * @returns {string}
    */
-  _getFallbackMessage(taskName) {
+  _getFallbackMessage(taskName, isOverdue = false) {
     const phrases = CONSTANTS.REMINDER_PHRASES;
     const phrase = phrases[Math.floor(Math.random() * phrases.length)];
-    return phrase.replace('{taskName}', taskName);
+    const message = phrase.replace('{taskName}', taskName);
+    return isOverdue ? `【期限切れ】${message}` : message;
   },
 
   /**
    * タスクをリマインドフレーズで発話
-   * @param {{name: string, boardName: string, priority: string}} task
+   * @param {{name: string, boardName: string, priority: string, isOverdue: boolean}} task
    */
   async remind(task) {
     const message = await this._generateMessage(
       task.boardName || '不明な案件',
       task.name,
-      task.priority || 'high'
+      task.priority || 'high',
+      task.isOverdue || false
     );
     await this.speak(message);
   },
