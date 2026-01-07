@@ -17,6 +17,9 @@ const App = {
   /** @type {Object} */
   _settings: null,
 
+  /** @type {number} */
+  _intervalMs: null,
+
   /** @type {Object} */
   _elements: {},
 
@@ -65,6 +68,9 @@ const App = {
 
       if (doc.exists) {
         this._settings = doc.data();
+        // リマインド間隔を設定（デフォルト15分）
+        const minutes = this._settings.intervalMinutes || 15;
+        this._intervalMs = minutes * 60 * 1000;
         // Claude APIキーをSpeechモジュールに設定
         Speech.setClaudeApiKey(this._settings.claudeApiKey);
         this._hideError();
@@ -108,7 +114,7 @@ const App = {
     await this._checkTasks();
 
     // 定期チェック開始
-    this._intervalId = setInterval(() => this._checkTasks(), CONSTANTS.DEFAULT_INTERVAL_MS);
+    this._intervalId = setInterval(() => this._checkTasks(), this._intervalMs);
 
     // カウントダウン開始
     this._startCountdown();
@@ -155,7 +161,7 @@ const App = {
       }
 
       // 次回チェック時間を更新
-      this._nextCheckTime = new Date(Date.now() + CONSTANTS.DEFAULT_INTERVAL_MS);
+      this._nextCheckTime = new Date(Date.now() + this._intervalMs);
     } catch (error) {
       this._showError(error.message);
     } finally {
@@ -443,7 +449,7 @@ const App = {
    * カウントダウン開始
    */
   _startCountdown() {
-    this._nextCheckTime = new Date(Date.now() + CONSTANTS.DEFAULT_INTERVAL_MS);
+    this._nextCheckTime = new Date(Date.now() + this._intervalMs);
 
     this._countdownId = setInterval(() => {
       if (!this._nextCheckTime) return;

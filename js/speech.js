@@ -54,7 +54,6 @@ const Speech = {
    */
   setClaudeApiKey(apiKey) {
     this._claudeApiKey = apiKey || null;
-    console.log('[Speech] Claude APIキー設定:', apiKey ? '設定済み' : '未設定');
   },
 
   /**
@@ -98,7 +97,7 @@ const Speech = {
    */
   async _generateMessage(boardName, taskName, priority, isOverdue = false) {
     if (!this._claudeApiKey) {
-      return this._getFallbackMessage(taskName, isOverdue);
+      return this._getFallbackMessage(taskName, isOverdue, boardName);
     }
 
     const priorityText = priority === 'critical' ? '緊急' : '高優先度';
@@ -149,12 +148,11 @@ ${isOverdue ? '【重要】期限切れなので特に急いでいることを�
         return message.trim();
       }
 
-      return this._getFallbackMessage(taskName, isOverdue);
+      return this._getFallbackMessage(taskName, isOverdue, boardName);
     } catch (error) {
       clearTimeout(timeoutId);
-      // エラー時は静的フレーズにfallback（原因をログ出力）
-      console.error('[Speech] Claude API error:', error.message || error);
-      return this._getFallbackMessage(taskName, isOverdue);
+      // エラー時は静的フレーズにfallback
+      return this._getFallbackMessage(taskName, isOverdue, boardName);
     }
   },
 
@@ -162,13 +160,13 @@ ${isOverdue ? '【重要】期限切れなので特に急いでいることを�
    * 静的フレーズを取得（fallback用）
    * @param {string} taskName
    * @param {boolean} isOverdue
+   * @param {string} boardName
    * @returns {string}
    */
-  _getFallbackMessage(taskName, isOverdue = false) {
-    const phrases = CONSTANTS.REMINDER_PHRASES;
-    const phrase = phrases[Math.floor(Math.random() * phrases.length)];
-    const message = phrase.replace('{taskName}', taskName);
-    return isOverdue ? `【期限切れ】${message}` : message;
+  _getFallbackMessage(taskName, isOverdue = false, boardName = '') {
+    const prefix = boardName ? `${boardName}の` : '';
+    const deadline = isOverdue ? '期限切れです！' : '今日が期限です。';
+    return `${prefix}${taskName}、${deadline}`;
   },
 
   /**

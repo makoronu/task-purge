@@ -24,6 +24,7 @@ const Admin = {
     this._elements = {
       apiToken: document.getElementById('api-token'),
       userSelect: document.getElementById('user-select'),
+      intervalMinutes: document.getElementById('interval-minutes'),
       claudeApiKey: document.getElementById('claude-api-key'),
       saveBtn: document.getElementById('save-btn'),
       testSpeechBtn: document.getElementById('test-speech-btn'),
@@ -62,6 +63,11 @@ const Admin = {
           if (settings.userId) {
             this._elements.userSelect.value = settings.userId;
           }
+        }
+
+        // リマインド間隔（デフォルト15分）
+        if (settings.intervalMinutes) {
+          this._elements.intervalMinutes.value = settings.intervalMinutes;
         }
 
         // Claude APIキー（任意）
@@ -118,9 +124,13 @@ const Admin = {
    * 設定を保存（簡素化版）
    */
   async _saveSettings() {
+    const intervalValue = parseInt(this._elements.intervalMinutes.value, 10);
+    const intervalMinutes = (intervalValue >= 1 && intervalValue <= 60) ? intervalValue : 15;
+
     const settings = {
       apiToken: this._elements.apiToken.value.trim(),
       userId: this._elements.userSelect.value,
+      intervalMinutes: intervalMinutes,
       claudeApiKey: this._elements.claudeApiKey.value.trim() || null,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
