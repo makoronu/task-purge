@@ -122,6 +122,13 @@ section {
   box-shadow: var(--shadow-sm);
 }
 
+.section-desc {
+  font-size: 13px;
+  color: var(--color-text-light);
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
 /* フォーム */
 .form-group {
   margin-bottom: 16px;

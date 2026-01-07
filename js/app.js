@@ -1,5 +1,5 @@
 /**
- * メインアプリケーション
+ * メインアプリケーション（全ボード監視版）
  */
 const App = {
   /** @type {number|null} */
@@ -17,7 +17,7 @@ const App = {
   /** @type {Object} */
   _settings: null,
 
-  // DOM要素
+  /** @type {Object} */
   _elements: {},
 
   /**
@@ -76,18 +76,13 @@ const App = {
   },
 
   /**
-   * 設定が完了しているか確認
+   * 設定が完了しているか確認（簡素化版）
    * @returns {boolean}
    */
   _isConfigured() {
     return !!(
       this._settings &&
       this._settings.apiToken &&
-      this._settings.boardId &&
-      this._settings.priorityColumn &&
-      this._settings.dateColumn &&
-      this._settings.statusColumn &&
-      this._settings.personColumn &&
       this._settings.userId
     );
   },
@@ -97,7 +92,7 @@ const App = {
    */
   async _startMonitoring() {
     if (!this._isConfigured()) {
-      this._showError('設定が完了していません。管理画面で全ての項目を設定してください。');
+      this._showError('設定が完了していません。管理画面でAPIトークンと監視対象ユーザーを設定してください。');
       return;
     }
 
@@ -147,9 +142,9 @@ const App = {
     this._isChecking = true;
 
     try {
-      // 設定からAPIトークンを使用
-      const items = await this._fetchItems();
-      const urgentTasks = this._filterUrgentTasks(items);
+      // 全ボードからタスク取得
+      const allItems = await this._fetchAllBoardsItems();
+      const urgentTasks = this._filterUrgentTasks(allItems);
 
       this._renderTasks(urgentTasks);
 
@@ -167,10 +162,37 @@ const App = {
   },
 
   /**
-   * Monday APIからアイテム取得
+   * 全ボードからアイテム取得
    * @returns {Promise<Array>}
    */
-  async _fetchItems() {
+  async _fetchAllBoardsItems() {
+    // 1. 全ボード取得
+    const boardsQuery = `query { boards(limit: 100) { id name } }`;
+    const boardsData = await this._fetchMonday(boardsQuery);
+    const allBoards = boardsData?.boards || [];
+
+    // サブアイテムボードを除外
+    const targetBoards = allBoards.filter(board => {
+      return !CONSTANTS.EXCLUDED_BOARD_PATTERNS.some(pattern =>
+        board.name.includes(pattern)
+      );
+    });
+
+    // 2. 各ボードからアイテム取得（並列実行）
+    const itemPromises = targetBoards.map(board => this._fetchBoardItems(board.id, board.name));
+    const itemArrays = await Promise.all(itemPromises);
+
+    // 3. 全アイテムを結合
+    return itemArrays.flat();
+  },
+
+  /**
+   * 単一ボードからアイテム取得
+   * @param {string} boardId
+   * @param {string} boardName
+   * @returns {Promise<Array>}
+   */
+  async _fetchBoardItems(boardId, boardName) {
     const query = `
       query ($boardId: [ID!]!) {
         boards(ids: $boardId) {
@@ -189,16 +211,32 @@ const App = {
       }
     `;
 
+    try {
+      const data = await this._fetchMonday(query, { boardId: [boardId] });
+      const items = data?.boards?.[0]?.items_page?.items || [];
+
+      // ボード名を各アイテムに付与
+      return items.map(item => ({ ...item, boardName }));
+    } catch {
+      // 個別ボードのエラーは無視して続行
+      return [];
+    }
+  },
+
+  /**
+   * Monday API呼び出し
+   * @param {string} query
+   * @param {Object} variables
+   * @returns {Promise<Object>}
+   */
+  async _fetchMonday(query, variables = {}) {
     const response = await fetch(CONSTANTS.MONDAY_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': this._settings.apiToken
       },
-      body: JSON.stringify({
-        query,
-        variables: { boardId: [this._settings.boardId] }
-      })
+      body: JSON.stringify({ query, variables })
     });
 
     if (response.status === 401) {
@@ -215,22 +253,23 @@ const App = {
       throw new Error(data.errors[0].message);
     }
 
-    return data?.data?.boards?.[0]?.items_page?.items || [];
+    return data.data;
   },
 
   /**
-   * 緊急・高優先度 + 当日期限 + 担当者フィルタ
+   * 緊急・高優先度 + 当日期限 + 担当者フィルタ（固定カラムID版）
    * @param {Array} items
    * @returns {Array}
    */
   _filterUrgentTasks(items) {
-    const { priorityColumn, dateColumn, statusColumn, personColumn, userId } = this._settings;
+    const { userId } = this._settings;
 
     return items.filter(item => {
-      const priorityCol = item.column_values.find(c => c.id === priorityColumn);
-      const dateCol = item.column_values.find(c => c.id === dateColumn);
-      const statusCol = item.column_values.find(c => c.id === statusColumn);
-      const personCol = item.column_values.find(c => c.id === personColumn);
+      // 固定カラムIDでカラムを探索
+      const priorityCol = this._findColumn(item.column_values, CONSTANTS.COLUMN_IDS.PRIORITY);
+      const dateCol = this._findColumn(item.column_values, CONSTANTS.COLUMN_IDS.DATE);
+      const statusCol = this._findColumnById(item.column_values, CONSTANTS.COLUMN_IDS.STATUS);
+      const personCol = this._findColumnById(item.column_values, CONSTANTS.COLUMN_IDS.PERSON);
 
       const priorityValue = priorityCol?.text || '';
       const dateValue = dateCol?.text || '';
@@ -243,14 +282,39 @@ const App = {
 
       return isHighPriority && isToday && !isCompleted && isAssignedToMe;
     }).map(item => {
-      const priorityCol = item.column_values.find(c => c.id === priorityColumn);
+      const priorityCol = this._findColumn(item.column_values, CONSTANTS.COLUMN_IDS.PRIORITY);
       const priorityValue = priorityCol?.text || '';
       return {
         id: item.id,
         name: item.name,
+        boardName: item.boardName,
         priority: this._getPriorityLevel(priorityValue)
       };
     });
+  },
+
+  /**
+   * 複数候補からカラムを探索
+   * @param {Array} columns
+   * @param {Array} idCandidates
+   * @returns {Object|null}
+   */
+  _findColumn(columns, idCandidates) {
+    for (const id of idCandidates) {
+      const col = columns.find(c => c.id === id);
+      if (col) return col;
+    }
+    return null;
+  },
+
+  /**
+   * 単一IDでカラムを探索
+   * @param {Array} columns
+   * @param {string} id
+   * @returns {Object|null}
+   */
+  _findColumnById(columns, id) {
+    return columns.find(c => c.id === id) || null;
   },
 
   /**

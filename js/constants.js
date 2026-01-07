@@ -8,6 +8,17 @@ const CONSTANTS = {
   // リマインド間隔（ミリ秒）
   DEFAULT_INTERVAL_MS: 15 * 60 * 1000, // 15分
 
+  // 固定カラムID（全ボード共通 - API調査結果より）
+  COLUMN_IDS: {
+    PERSON: 'person',
+    STATUS: 'status',
+    DATE: ['date4', 'date0', 'date_mkybm0xa'],
+    PRIORITY: ['priority', 'priority2', 'color_mkybqdk7', 'color_mkybqv1q', 'color_mkybb6cr', 'color_mkybag09', 'color_mkyb17nw']
+  },
+
+  // サブアイテムボード除外パターン
+  EXCLUDED_BOARD_PATTERNS: ['サブアイテム'],
+
   // 優先度の値（大文字小文字両方対応）
   PRIORITY_VALUES: {
     CRITICAL: ['緊急', 'critical', 'Critical', 'CRITICAL', '最優先'],
@@ -44,6 +55,7 @@ const CONSTANTS = {
 
 // 変更防止
 Object.freeze(CONSTANTS);
+Object.freeze(CONSTANTS.COLUMN_IDS);
 Object.freeze(CONSTANTS.PRIORITY_VALUES);
 Object.freeze(CONSTANTS.STORAGE_KEYS);
 Object.freeze(CONSTANTS.ERROR_MESSAGES);
