@@ -183,11 +183,15 @@ const App = {
    * @returns {Promise<Array>}
    */
   async _fetchBoards() {
-    if (this._boards) return this._boards;
+    if (this._boards) {
+      console.log('[DEBUG] ボード一覧: キャッシュ使用', this._boards.length, '件');
+      return this._boards;
+    }
 
     const query = `query { boards(limit: 100) { id name } }`;
     const data = await this._fetchMonday(query);
     const allBoards = data?.boards || [];
+    console.log('[DEBUG] ボード取得: 全', allBoards.length, '件');
 
     // サブアイテムボードを除外してキャッシュ
     this._boards = allBoards.filter(board => {
@@ -195,6 +199,7 @@ const App = {
         board.name.includes(pattern)
       );
     });
+    console.log('[DEBUG] フィルタ後ボード:', this._boards.length, '件', this._boards.map(b => b.name));
 
     return this._boards;
   },
@@ -249,14 +254,17 @@ const App = {
       }
     `;
 
+    console.log('[DEBUG] 1クエリ取得開始: ボードID', boardIds.length, '件');
     const data = await this._fetchMonday(query, { boardIds });
     const resultBoards = data?.boards || [];
+    console.log('[DEBUG] API応答: ボード', resultBoards.length, '件返却');
 
     // 全アイテムを結合（boardId, boardName付与）
     const allItems = [];
     resultBoards.forEach(board => {
       if (!board) return;
       const items = board.items_page?.items || [];
+      console.log('[DEBUG]  -', board.name, ':', items.length, 'アイテム');
       items.forEach(item => {
         allItems.push({
           ...item,
@@ -266,6 +274,7 @@ const App = {
       });
     });
 
+    console.log('[DEBUG] 1クエリ取得完了: 合計', allItems.length, 'アイテム');
     return allItems;
   },
 
@@ -385,8 +394,9 @@ const App = {
    */
   _filterUrgentTasks(items) {
     const { userId } = this._settings;
+    console.log('[DEBUG] フィルタ開始: 入力', items.length, 'アイテム, userId:', userId);
 
-    return items.filter(item => {
+    const filtered = items.filter(item => {
       // 固定カラムIDでカラムを探索
       const priorityCol = this._findColumn(item.column_values, CONSTANTS.COLUMN_IDS.PRIORITY);
       const dateCol = this._findColumn(item.column_values, CONSTANTS.COLUMN_IDS.DATE);
@@ -403,7 +413,11 @@ const App = {
       const isAssignedToMe = this._isAssignedToUser(personCol, userId);
 
       return isHighPriority && isTodayOrPast && !isCompleted && isAssignedToMe;
-    }).map(item => {
+    });
+
+    console.log('[DEBUG] フィルタ後:', filtered.length, '件が条件一致');
+
+    const result = filtered.map(item => {
       const priorityCol = this._findColumn(item.column_values, CONSTANTS.COLUMN_IDS.PRIORITY);
       const dateCol = this._findColumn(item.column_values, CONSTANTS.COLUMN_IDS.DATE);
       const priorityValue = priorityCol?.text || '';
@@ -417,6 +431,9 @@ const App = {
         isOverdue: this._isOverdue(dateValue)
       };
     });
+
+    console.log('[DEBUG] 最終結果:', result.map(t => `${t.boardName}/${t.name}`));
+    return result;
   },
 
   /**
