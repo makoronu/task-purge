@@ -26,6 +26,9 @@ const App = {
   /** @type {string} */
   _accountSlug: '',
 
+  /** @type {Array|null} */
+  _boards: null,
+
   /**
    * アプリケーション初期化
    */
@@ -176,27 +179,104 @@ const App = {
   },
 
   /**
-   * 全ボードからアイテム取得
+   * ボード一覧を取得（キャッシュ使用）
    * @returns {Promise<Array>}
    */
-  async _fetchAllBoardsItems() {
-    // 1. 全ボード取得
-    const boardsQuery = `query { boards(limit: 100) { id name } }`;
-    const boardsData = await this._fetchMonday(boardsQuery);
-    const allBoards = boardsData?.boards || [];
+  async _fetchBoards() {
+    if (this._boards) return this._boards;
 
-    // サブアイテムボードを除外
-    const targetBoards = allBoards.filter(board => {
+    const query = `query { boards(limit: 100) { id name } }`;
+    const data = await this._fetchMonday(query);
+    const allBoards = data?.boards || [];
+
+    // サブアイテムボードを除外してキャッシュ
+    this._boards = allBoards.filter(board => {
       return !CONSTANTS.EXCLUDED_BOARD_PATTERNS.some(pattern =>
         board.name.includes(pattern)
       );
     });
 
-    // 2. 各ボードからアイテム取得（並列実行）
-    const itemPromises = targetBoards.map(board => this._fetchBoardItems(board.id, board.name));
-    const itemArrays = await Promise.all(itemPromises);
+    return this._boards;
+  },
 
-    // 3. 全アイテムを結合
+  /**
+   * 全ボードからアイテム取得（1クエリで最適化）
+   * @returns {Promise<Array>}
+   */
+  async _fetchAllBoardsItems() {
+    const boards = await this._fetchBoards();
+    if (boards.length === 0) return [];
+
+    const boardIds = boards.map(b => b.id);
+
+    try {
+      // 1クエリで全ボードのアイテムを取得
+      return await this._fetchBoardsItemsInOneQuery(boardIds, boards);
+    } catch (error) {
+      // 複雑度超過時はフォールバック（個別取得）
+      if (error.message?.includes('complexity') || error.message?.includes('Complexity')) {
+        console.warn('複雑度超過、個別取得にフォールバック');
+        return await this._fetchBoardsItemsIndividually(boards);
+      }
+      throw error;
+    }
+  },
+
+  /**
+   * 複数ボードを1クエリで取得
+   * @param {Array<string>} boardIds
+   * @param {Array<Object>} boards - id, nameを含むボード情報
+   * @returns {Promise<Array>}
+   */
+  async _fetchBoardsItemsInOneQuery(boardIds, boards) {
+    const query = `
+      query ($boardIds: [ID!]!) {
+        boards(ids: $boardIds) {
+          id
+          name
+          items_page(limit: 500) {
+            items {
+              id
+              name
+              column_values {
+                id
+                text
+                value
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    const data = await this._fetchMonday(query, { boardIds });
+    const resultBoards = data?.boards || [];
+
+    // 全アイテムを結合（boardId, boardName付与）
+    const allItems = [];
+    resultBoards.forEach(board => {
+      if (!board) return;
+      const items = board.items_page?.items || [];
+      items.forEach(item => {
+        allItems.push({
+          ...item,
+          boardId: board.id,
+          boardName: board.name
+        });
+      });
+    });
+
+    return allItems;
+  },
+
+  /**
+   * 個別にボードを取得（フォールバック用）
+   * @param {Array<Object>} boards
+   * @returns {Promise<Array>}
+   */
+  async _fetchBoardsItemsIndividually(boards) {
+    const itemPromises = boards.map(board => this._fetchBoardItems(board.id, board.name));
+    const itemArrays = await Promise.all(itemPromises);
     return itemArrays.flat();
   },
 
