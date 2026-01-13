@@ -24,6 +24,7 @@ const Admin = {
     this._elements = {
       apiToken: document.getElementById('api-token'),
       userSelect: document.getElementById('user-select'),
+      reconnectBtn: document.getElementById('reconnect-btn'),
       intervalMinutes: document.getElementById('interval-minutes'),
       claudeApiKey: document.getElementById('claude-api-key'),
       saveBtn: document.getElementById('save-btn'),
@@ -38,6 +39,7 @@ const Admin = {
    */
   _bindEvents() {
     this._elements.apiToken.addEventListener('change', () => this._onTokenChange());
+    this._elements.reconnectBtn.addEventListener('click', () => this._reconnect());
     this._elements.saveBtn.addEventListener('click', () => this._saveSettings());
     this._elements.testSpeechBtn.addEventListener('click', () => this._testSpeech());
   },
@@ -88,6 +90,40 @@ const Admin = {
     if (!token) return;
 
     await this._loadUsers();
+  },
+
+  /**
+   * 再接続（Service Worker再登録 + ユーザー再取得）
+   */
+  async _reconnect() {
+    const token = this._elements.apiToken.value.trim();
+    if (!token) {
+      this._showError('APIトークンを入力してください');
+      return;
+    }
+
+    this._elements.reconnectBtn.disabled = true;
+    this._elements.reconnectBtn.textContent = '接続中...';
+
+    try {
+      // Service Workerを再登録
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const registration of registrations) {
+          await registration.unregister();
+        }
+        await navigator.serviceWorker.register('/sw.js');
+      }
+
+      // ユーザー一覧を再取得
+      await this._loadUsers();
+      this._showSuccess('再接続しました');
+    } catch (error) {
+      this._showError('再接続に失敗しました: ' + error.message);
+    } finally {
+      this._elements.reconnectBtn.disabled = false;
+      this._elements.reconnectBtn.textContent = '再接続';
+    }
   },
 
   /**

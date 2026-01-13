@@ -47,9 +47,12 @@
       <p class="section-desc">全ボードから、選択したユーザーに割り当てられた緊急・高優先度タスクを監視します。</p>
       <div class="form-group">
         <label for="user-select">ユーザー（自分）</label>
-        <select id="user-select" disabled>
-          <option value="">APIトークンを入力してください</option>
-        </select>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <select id="user-select" disabled style="flex: 1;">
+            <option value="">APIトークンを入力してください</option>
+          </select>
+          <button id="reconnect-btn" class="btn btn-secondary" title="ユーザー一覧を再取得">再接続</button>
+        </div>
       </div>
     </section>
 
