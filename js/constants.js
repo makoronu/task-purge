@@ -2,8 +2,10 @@
  * 定数定義
  */
 const CONSTANTS = {
-  // Monday.com API
-  MONDAY_API_URL: 'https://api.monday.com/v2',
+  // Monday.com API（本番はプロキシ経由でCORS回避）
+  MONDAY_API_URL: window.location.hostname === 'tp.polar-ai.app'
+    ? '/api/monday'
+    : 'https://api.monday.com/v2',
 
   // リマインド間隔（ミリ秒）
   DEFAULT_INTERVAL_MS: 15 * 60 * 1000, // 15分
